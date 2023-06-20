@@ -14,7 +14,7 @@ from PIL import Image
 
 from .collagemaker import MakeCollage
 from .downloader import Download
-from .exceptions import DidNotSupplyPathOrUrl, StoragePathDoesNotExist
+from .exceptions import DidNotSupplyPathOrUrl, StoragePathDoesNotExist, FFmpegFailedToExtractFrames
 from .framesextractor import FramesExtractor
 from .tilemaker import make_tile
 from .utils import (
@@ -94,7 +94,12 @@ class VideoHash:
         else:
             self._copy_video_to_video_dir()
         
-        FramesExtractor(self.video_path, output_dir=self.frames_dir, interval=self.frame_interval, video_file=self.video_file)
+        try:
+            FramesExtractor(self.video_path, output_dir=self.frames_dir, interval=self.frame_interval, video_file=self.video_file)
+        except FFmpegFailedToExtractFrames as err:
+            print(err)
+            self = None
+            return None
         
         self.collage_path = os.path.join(self.collage_dir, "collage.jpg")
 
@@ -103,22 +108,35 @@ class VideoHash:
             "horizontally_concatenated_image.png",
         )
 
-        MakeCollage(
-            get_list_of_all_files_in_dir(self.frames_dir),
-            self.collage_path,
-            collage_image_width=1024,
-        )
+        try:
+            MakeCollage(
+                get_list_of_all_files_in_dir(self.frames_dir),
+                self.collage_path,
+                collage_image_width=1024,
+            )
+        except Exception as err:
+            print(err)
+            self = None
+            return None
 
-        make_tile(
-            self.frames_dir, self.horizontally_concatenated_image_path, self.tiles_dir
-        )
+        try:
+            make_tile(
+                self.frames_dir, self.horizontally_concatenated_image_path, self.tiles_dir
+            )
+        except Exception as err:
+            print(err)
+            self = None
+            return None
 
-        self.image = Image.open(self.collage_path)
-        self.bits_in_hash = 64
-        self.similar_percentage = 15
-        self.video_duration = video_duration(video_path=self.video_path, video_file=self.video_file)
+        try:
+            self.image = Image.open(self.collage_path)
+            self.bits_in_hash = 64
+            self.similar_percentage = 15
+            self.video_duration = video_duration(video_path=self.video_path, video_file=self.video_file)
 
-        self._calc_hash()
+            self._calc_hash()
+        except Exception as err:
+            print(err)
 
     def __str__(self) -> str:
         """
@@ -131,7 +149,10 @@ class VideoHash:
         :rtype: str
         """
 
-        return self.hash
+        try:
+            return self.hash
+        except AttributeError:
+            return ""
 
     def __repr__(self) -> str:
         """
@@ -142,10 +163,13 @@ class VideoHash:
         :rtype: str
         """
 
-        return (
-            f"VideoHash(hash={self.hash}, hash_hex={self.hash_hex}, "
-            + f"collage_path={self.collage_path}, bits_in_hash={self.bits_in_hash})"
-        )
+        try:
+            return (
+                f"VideoHash(hash={self.hash}, hash_hex={self.hash_hex}, "
+                + f"collage_path={self.collage_path}, bits_in_hash={self.bits_in_hash})"
+            )
+        except AttributeError:
+            return ""
 
     def __len__(self) -> int:
         """
@@ -156,7 +180,10 @@ class VideoHash:
 
         :rtype: int
         """
-        return len(self.hash)
+        try:
+            return len(self.hash)
+        except AttributeError:
+            return 0
 
     def __ne__(self, other: object) -> bool:
         """
@@ -402,10 +429,10 @@ class VideoHash:
         else:
             return False
 
-    def is_diffrent(self, other: object) -> bool:
+    def is_different(self, other: object) -> bool:
         """
         Refer to the is_similar,
-        if not similar then diffrent.
+        if not similar then different.
         """
 
         if not self.is_similar(other):
