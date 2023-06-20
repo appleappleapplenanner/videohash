@@ -302,7 +302,7 @@ class VideoHash:
         :raises ValueError: If the path supplied by the end user
                             lacks an extension. E.g. webm, mkv and mp4.
         """
-        self.video_path: str = ""
+        self.video_path = ""
 
         if self.path:
             # create a copy of the video at self.storage_path

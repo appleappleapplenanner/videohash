@@ -29,8 +29,8 @@ class FramesExtractor:
         video_path: str,
         output_dir: str,
         interval: int | float = 1,
-        ffmpeg_path: str = None,
-        video_file: IOBase = None,
+        ffmpeg_path: Optional[str] = None,
+        video_file: Optional[IOBase] = None,
     ) -> None:
         """
         Raises Exeception if video_path does not exists.
