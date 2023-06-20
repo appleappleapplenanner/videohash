@@ -31,7 +31,9 @@ def video_duration(video_path: str, ffmpeg_path: Optional[str] = None, video_fil
     command = f'"{ffmpeg_path}" -i "{video_path}"'
     if video_file:
         process = Popen(command, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        video_file.seek(0)
         output, error = process.communicate(video_file.read())
+        video_file.seek(0)
     else:
         process = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
         output, error = process.communicate()

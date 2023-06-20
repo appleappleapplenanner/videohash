@@ -86,6 +86,7 @@ class VideoHash:
         self._create_required_dirs_and_check_for_errors()
 
         if video_file:
+            video_file.seek(0) # Go to beginning just in case they forgot
             # TODO: Add Windows support (?)
             # the video file is piped through stdin to ffmpeg
             self.path = "/dev/stdin" 

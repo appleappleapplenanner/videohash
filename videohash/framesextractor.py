@@ -163,7 +163,9 @@ class FramesExtractor:
 
             if video_file:
                 process = Popen(command, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+                video_file.seek(0)
                 output, error = process.communicate(video_file.read())
+                video_file.seek(0)
             else:
                 process = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
                 output, error = process.communicate()
@@ -227,7 +229,9 @@ class FramesExtractor:
 
         if video_file:
             process = Popen(command, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+            video_file.seek(0)
             output, error = process.communicate(input=video_file.read())
+            video_file.seek(0)
         else:
             process = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
             output, error = process.communicate()
