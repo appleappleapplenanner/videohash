@@ -64,8 +64,7 @@ class FramesExtractor:
         
         if self.video_file:
             # TODO: Check if video_file exists on filesystem
-            # TODO: Add Windows stdin (?)
-            self.video_path = '/dev/stdin' 
+            self.video_path = 'pipe:' 
         else:
             if not does_path_exists(self.video_path):
                 raise FileNotFoundError(

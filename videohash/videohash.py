@@ -87,9 +87,8 @@ class VideoHash:
 
         if video_file:
             video_file.seek(0) # Go to beginning just in case they forgot
-            # TODO: Add Windows support (?)
             # the video file is piped through stdin to ffmpeg
-            self.path = "/dev/stdin" 
+            self.path = "pipe:" 
             self.video_path = self.path
         else:
             self._copy_video_to_video_dir()
