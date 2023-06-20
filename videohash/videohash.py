@@ -93,50 +93,38 @@ class VideoHash:
             self.video_path = self.path
         else:
             self._copy_video_to_video_dir()
-        
+
         try:
             FramesExtractor(self.video_path, output_dir=self.frames_dir, interval=self.frame_interval, video_file=self.video_file)
-        except FFmpegFailedToExtractFrames as err:
-            print(err)
-            self = None
-            return None
         
-        self.collage_path = os.path.join(self.collage_dir, "collage.jpg")
+            self.collage_path = os.path.join(self.collage_dir, "collage.jpg")
 
-        self.horizontally_concatenated_image_path = os.path.join(
-            self.horizontally_concatenated_image_dir,
-            "horizontally_concatenated_image.png",
-        )
+            self.horizontally_concatenated_image_path = os.path.join(
+                self.horizontally_concatenated_image_dir,
+                "horizontally_concatenated_image.png",
+            )
 
-        try:
             MakeCollage(
                 get_list_of_all_files_in_dir(self.frames_dir),
                 self.collage_path,
                 collage_image_width=1024,
             )
-        except Exception as err:
-            print(err)
-            self = None
-            return None
 
-        try:
             make_tile(
                 self.frames_dir, self.horizontally_concatenated_image_path, self.tiles_dir
             )
-        except Exception as err:
-            print(err)
-            self = None
-            return None
-
-        try:
+            
             self.image = Image.open(self.collage_path)
             self.bits_in_hash = 64
             self.similar_percentage = 15
             self.video_duration = video_duration(video_path=self.video_path, video_file=self.video_file)
 
             self._calc_hash()
+
         except Exception as err:
             print(err)
+            # VideoHash is meaningless if any step fails so just return None
+            return None
 
     def __str__(self) -> str:
         """
