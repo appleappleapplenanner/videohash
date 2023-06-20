@@ -4,6 +4,7 @@ import shlex
 from shutil import which
 from subprocess import PIPE, Popen, check_output
 from typing import Optional, Union
+from io import IOBase
 
 from .exceptions import (
     FFmpegError,
@@ -27,8 +28,9 @@ class FramesExtractor:
         self,
         video_path: str,
         output_dir: str,
-        interval: Union[int, float] = 1,
-        ffmpeg_path: Optional[str] = None,
+        interval: int | float = 1,
+        ffmpeg_path: str = None,
+        video_file: IOBase = None,
     ) -> None:
         """
         Raises Exeception if video_path does not exists.
@@ -56,13 +58,19 @@ class FramesExtractor:
         self.output_dir = output_dir
         self.interval = interval
         self.ffmpeg_path = ""
+        self.video_file = video_file
         if ffmpeg_path:
             self.ffmpeg_path = ffmpeg_path
-
-        if not does_path_exists(self.video_path):
-            raise FileNotFoundError(
-                f"No video found at '{self.video_path}' for frame extraction."
-            )
+        
+        if self.video_file:
+            # TODO: Check if video_file exists on filesystem
+            # TODO: Add Windows stdin (?)
+            self.video_path = '/dev/stdin' 
+        else:
+            if not does_path_exists(self.video_path):
+                raise FileNotFoundError(
+                    f"No video found at '{self.video_path}' for frame extraction."
+                )
 
         if not does_path_exists(self.output_dir):
             raise FramesExtractorOutPutDirDoesNotExist(
@@ -112,9 +120,10 @@ class FramesExtractor:
 
     @staticmethod
     def detect_crop(
-        video_path: Optional[str] = None,
+        video_path: str,
         frames: int = 3,
         ffmpeg_path: Optional[str] = None,
+        video_file: Optional[IOBase] = None,
     ) -> str:
         """
         Detects the the amount of cropping to remove black bars.
@@ -152,9 +161,12 @@ class FramesExtractor:
 
             command = f'"{ffmpeg_path}" -ss {start_time} -i "{video_path}" -vframes {frames} -vf cropdetect -f null -'
 
-            process = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
-
-            output, error = process.communicate()
+            if video_file:
+                process = Popen(command, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+                output, error = process.communicate(video_file.read())
+            else:
+                process = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+                output, error = process.communicate()
 
             matches = re.findall(
                 r"crop\=[0-9]{1,4}:[0-9]{1,4}:[0-9]{1,4}:[0-9]{1,4}",
@@ -187,6 +199,7 @@ class FramesExtractor:
         ffmpeg_path = self.ffmpeg_path
         video_path = self.video_path
         output_dir = self.output_dir
+        video_file = self.video_file
 
         if os.name == "posix":
             ffmpeg_path = shlex.quote(self.ffmpeg_path)
@@ -194,7 +207,7 @@ class FramesExtractor:
             output_dir = shlex.quote(self.output_dir)
 
         crop = FramesExtractor.detect_crop(
-            video_path=video_path, frames=3, ffmpeg_path=ffmpeg_path
+            video_path=video_path, frames=3, ffmpeg_path=ffmpeg_path, video_file=video_file
         )
 
         command = (
@@ -212,8 +225,12 @@ class FramesExtractor:
             + '"'
         )
 
-        process = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
-        output, error = process.communicate()
+        if video_file:
+            process = Popen(command, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+            output, error = process.communicate(input=video_file.read())
+        else:
+            process = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+            output, error = process.communicate()
 
         ffmpeg_output = output.decode()
         ffmpeg_error = error.decode()

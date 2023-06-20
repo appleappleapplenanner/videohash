@@ -2,12 +2,13 @@ import re
 from shutil import which
 from subprocess import PIPE, Popen
 from typing import Optional
+from io import IOBase
 
 # Module to determine the length of video.
 # The length is found by the FFmpeg, the output of video_duration is in seconds.
 
 
-def video_duration(video_path: str, ffmpeg_path: Optional[str] = None) -> float:
+def video_duration(video_path: str, ffmpeg_path: Optional[str] = None, video_file: Optional[IOBase] = None) -> float:
     """
     Retrieve the exact video duration as echoed by the FFmpeg and return
     the duration in seconds. Maximum duration supported is 999 hours, above
@@ -16,6 +17,8 @@ def video_duration(video_path: str, ffmpeg_path: Optional[str] = None) -> float:
     :param video_path: Absolute path of the video file.
 
     :param ffmpeg_path: Path of the FFmpeg software if not in path.
+
+    :param video_file: Video file if possible to pass directly.
 
     :return: Video length(duration) in seconds.
 
@@ -26,8 +29,12 @@ def video_duration(video_path: str, ffmpeg_path: Optional[str] = None) -> float:
         ffmpeg_path = str(which("ffmpeg"))
 
     command = f'"{ffmpeg_path}" -i "{video_path}"'
-    process = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
-    output, error = process.communicate()
+    if video_file:
+        process = Popen(command, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        output, error = process.communicate(video_file.read())
+    else:
+        process = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+        output, error = process.communicate()
 
     match = re.search(
         r"Duration\:(\s\d?\d\d\:\d\d\:\d\d\.\d\d)\,",

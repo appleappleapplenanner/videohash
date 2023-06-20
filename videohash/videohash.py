@@ -4,7 +4,8 @@ import re
 import shutil
 from pathlib import Path
 from math import ceil
-from typing import List, Optional, Union
+from typing import List, Optional
+from io import IOBase
 
 import imagehash
 import numpy as np
@@ -37,7 +38,8 @@ class VideoHash:
         url: Optional[str] = None,
         storage_path: Optional[str] = None,
         download_worst: bool = False,
-        frame_interval: Union[int, float] = 1,
+        frame_interval: int | float = 1,
+        video_file: Optional[IOBase] = None,
     ) -> None:
         """
         :param path: Absolute path of the input video file.
@@ -61,6 +63,7 @@ class VideoHash:
                                Smaller frame_interval implies fewer frames and
                                vice-versa.
 
+        :param video_file: Video file if possible to pass directly.
 
         :return: None
 
@@ -68,6 +71,7 @@ class VideoHash:
         """
         self.path = path
         self.url = url
+        self.video_file = video_file
 
         self.storage_path = ""
         if storage_path:
@@ -81,10 +85,16 @@ class VideoHash:
 
         self._create_required_dirs_and_check_for_errors()
 
-        self._copy_video_to_video_dir()
-
-        FramesExtractor(self.video_path, self.frames_dir, interval=self.frame_interval)
-
+        if video_file:
+            # TODO: Add Windows support (?)
+            # the video file is piped through stdin to ffmpeg
+            self.path = "/dev/stdin" 
+            self.video_path = self.path
+        else:
+            self._copy_video_to_video_dir()
+        
+        FramesExtractor(self.video_path, output_dir=self.frames_dir, interval=self.frame_interval, video_file=self.video_file)
+        
         self.collage_path = os.path.join(self.collage_dir, "collage.jpg")
 
         self.horizontally_concatenated_image_path = os.path.join(
@@ -105,7 +115,7 @@ class VideoHash:
         self.image = Image.open(self.collage_path)
         self.bits_in_hash = 64
         self.similar_percentage = 15
-        self.video_duration = video_duration(self.video_path)
+        self.video_duration = video_duration(video_path=self.video_path, video_file=self.video_file)
 
         self._calc_hash()
 
@@ -336,13 +346,13 @@ class VideoHash:
 
         :rtype: NoneType
         """
-        if not self.path and not self.url:
+        if not self.path and not self.url and not self.video_file:
             raise DidNotSupplyPathOrUrl(
-                "You must specify either a path or an URL of the video."
+                "You must specify either a path, file, or URL of the video."
             )
 
-        if self.path and self.url:
-            raise ValueError("Specify either a path or an URL and NOT both.")
+        if self.path and self.url or self.path and self.video_file or self.video_file and self.url:
+            raise ValueError("Specify either a path, file, or URL but only one.")
 
         if not self.storage_path:
             self.storage_path = create_and_return_temporary_directory()
